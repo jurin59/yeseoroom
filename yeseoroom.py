@@ -2,23 +2,18 @@ import streamlit as st
 from PIL import Image
 import os
 
-# 1. 모바일 우선 설정
-st.set_page_config(
-    page_title="예서의 마법 옷장",
-    layout="centered", # 모바일은 중앙 집중형이 보기 편해요
-    initial_sidebar_state="collapsed" # 사이드바를 일단 접어서 화면을 넓게 써요
-)
+# 1. 페이지 설정
+st.set_page_config(page_title="예서의 마법 옷장", layout="centered", initial_sidebar_state="collapsed")
 
-# 모바일에서 글자가 잘 보이도록 CSS 스타일 추가
+# 스타일 설정
 st.markdown("""
     <style>
-    .main { text-align: center; }
-    .stButton>button { width: 100%; height: 3em; font-size: 1.2rem !important; }
-    .stCheckbox { font-size: 1.1rem !important; }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3em; }
+    .category-box { background-color: #FFF0F5; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("💖 예서의 모바일 옷장 👗")
+st.title("💖 예서의 무한 변신 옷장 👗")
 
 # --- 이미지 합성 함수 ---
 def apply_layer(base_img, path):
@@ -30,52 +25,101 @@ def apply_layer(base_img, path):
         pass
     return base_img
 
-# --- 상단 조작 영역 (모바일은 위에서 아래로 흐르는 게 편함) ---
-st.subheader("🎨 어떻게 꾸밀까요?")
-tab1, tab2, tab3 = st.tabs(["🏠 배경", "👗 의상", "🎀 장식"])
+# --- 파일 존재 확인 및 리스트 생성 함수 ---
+def get_item_list(category_name):
+    # 번호 없는 기본 파일 확인
+    items = []
+    if os.path.exists(f"{category_name}.png"):
+        items.append(category_name)
+    # 1번부터 4번까지 확인
+    for i in range(1, 5):
+        if os.path.exists(f"{category_name}{i}.png"):
+            items.append(f"{category_name}{i}")
+    return ["안 함"] + items
 
-with tab1:
-    bg_choice = st.selectbox("장소를 골라요", ["기본 배경", "핑크 방", "푸른 공원"], key="bg")
+# --- 조작 영역 ---
+st.subheader("🎨 예서의 스타일링 센터")
+tabs = st.tabs(["🏠 배경", "💇 헤어/눈", "👗 의상", "🎀 액세서리"])
 
-with tab2:
-    outfit_choice = st.radio("오늘의 옷", ["입기 전", "첫 번째 스타일", "두 번째 스타일"], horizontal=True)
+with tabs[0]:
+    bg_choice = st.selectbox("어디로 갈까요?", ["기본 배경", "핑크 방", "푸른 공원"])
 
-with tab3:
-    st.write("액세서리를 골라보세요!")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        acc1 = st.checkbox("토끼 키링 🐰")
-        acc2 = st.checkbox("반짝 목걸이 ✨")
-    with col_b:
-        acc3 = st.checkbox("예쁜 가방 👜")
-        acc4 = st.checkbox("리본 머리띠 🎀")
+with tabs[1]:
+    col1, col2 = st.columns(2)
+    with col1:
+        hair_choice = st.selectbox("헤어 스타일", get_item_list("헤어"))
+    with col2:
+        eye_choice = st.selectbox("예쁜 눈", get_item_list("눈"))
 
-# --- 메인 화면 그리기 ---
-st.divider()
+with tabs[2]:
+    style_mode = st.radio("의상 종류", ["한벌 옷", "상의 & 하의"], horizontal=True)
+    if style_mode == "한벌 옷":
+        onepiece_choice = st.selectbox("한벌 코디", get_item_list("한벌"))
+        top_choice, bottom_choice = "안 함", "안 함"
+    else:
+        c1, c2 = st.columns(2)
+        with c1: top_choice = st.selectbox("상의", get_item_list("상의"))
+        with c2: bottom_choice = st.selectbox("하의", get_item_list("하의"))
+        onepiece_choice = "안 함"
 
+with tabs[3]:
+    c1, c2 = st.columns(2)
+    with c1:
+        hat_choice = st.selectbox("모자", get_item_list("모자"))
+    with c2:
+        mouth_choice = st.selectbox("입 모양", get_item_list("입"))
+
+# --- 이미지 생성 및 출력 ---
 try:
-    # 1. 배경 설정 (800x1200 세로 비율)
+    # 배경 생성
     bg_file = "bg1.png" if bg_choice == "핑크 방" else "bg2.png" if bg_choice == "푸른 공원" else None
     if bg_file and os.path.exists(bg_file):
         canvas = Image.open(bg_file).convert("RGBA").resize((800, 1200))
     else:
         canvas = Image.new("RGBA", (800, 1200), (255, 245, 250, 255))
 
-    # 2. 캐릭터 몸체 (body.png)
+    # 캐릭터 베이스
     if os.path.exists("body.png"):
         body = Image.open("body.png").convert("RGBA").resize((800, 1200))
         canvas.alpha_composite(body)
-        
-        # 3. 의상 입히기
-        if outfit_choice == "첫 번째 스타일":
-            canvas = apply_layer(canvas, "outfit1.png")
-        elif outfit_choice == "두 번째 스타일":
-            canvas = apply_layer(canvas, "outfit2.png")
-            
-        # 4. 액세서리 입히기
-        if acc1: canvas = apply_layer(canvas, "acc1.png")
-        if acc2: canvas = apply_layer(canvas, "acc2.png")
-        if acc3: canvas = apply_layer(canvas, "acc3.png")
-        if acc4: canvas = apply_layer(canvas, "acc4.png")
 
-        # 5. 최종 결과물 출력 (모바일 너비에 맞
+        # 레이어 순서대로 입히기 (눈 -> 헤어 -> 옷 -> 모자 순)
+        if eye_choice != "안 함": canvas = apply_layer(canvas, f"{eye_choice}.png")
+        if mouth_choice != "안 함": canvas = apply_layer(canvas, f"{mouth_choice}.png")
+        if hair_choice != "안 함": canvas = apply_layer(canvas, f"{hair_choice}.png")
+        
+        # 옷 입히기
+        if style_mode == "한벌 옷":
+            if onepiece_choice != "안 함": canvas = apply_layer(canvas, f"{onepiece_choice}.png")
+        else:
+            if top_choice != "안 함": canvas = apply_layer(canvas, f"{top_choice}.png")
+            if bottom_choice != "안 함": canvas = apply_layer(canvas, f"{bottom_choice}.png")
+            
+        if hat_choice != "안 함": canvas = apply_layer(canvas, f"{hat_choice}.png")
+
+        st.image(canvas, use_container_width=True)
+    else:
+        st.warning("body.png 파일을 찾을 수 없어요!")
+
+except Exception as e:
+    st.error("이미지를 합성하는 중 에러가 났어요. 파일 이름을 확인해 주세요!")
+
+# --- 풍선 터뜨리기 게임 ---
+st.divider()
+st.subheader("🎈 풍선 터뜨리기 파티!")
+if 'balloons' not in st.session_state:
+    st.session_state.balloons = [True] * 5
+
+b_cols = st.columns(5)
+for i in range(5):
+    with b_cols[i]:
+        if st.session_state.balloons[i]:
+            if st.button("🎈", key=f"b_{i}"):
+                st.session_state.balloons[i] = False
+                st.rerun()
+        else: st.write("💥")
+
+if not any(st.session_state.balloons):
+    if st.button("🔄 풍선 다시 불기"):
+        st.session_state.balloons = [True] * 5
+        st.rerun()

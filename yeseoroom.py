@@ -3,37 +3,32 @@ from PIL import Image
 import os
 
 # 1. 페이지 설정
-st.set_page_config(page_title="예서의 마법 옷장", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="예서의 마법 옷장", layout="centered")
 
+# 스타일 설정: 풍선과 버튼 예쁘게 만들기
 st.markdown("""
     <style>
-    .stSlider { padding-bottom: 20px; }
-    .stButton>button { width: 100%; border-radius: 12px; height: 3em; background-color: #FFB6C1; color: white; }
+    .stButton>button { width: 100%; border-radius: 15px; height: 3.5em; font-size: 1.2rem; }
+    .balloon-text { font-size: 2rem; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("💖 예서의 무한 변신 옷장 👗")
+st.title("💖 예서의 마법 옷장 👗")
 
-# --- 이미지 합성 함수 (위치/크기 조절 기능 추가) ---
-def apply_layer(base_img, path, x_off=0, y_off=0, scale=1.0):
+# --- 이미지 합성 함수 (아빠가 여기서 숫자를 조절할 수 있어요!) ---
+def apply_layer(base_img, path, y_off=0):
     try:
         if os.path.exists(path):
             layer = Image.open(path).convert("RGBA")
-            # 1. 크기 조절 (기본 너비에 scale 곱하기)
-            bg_w, bg_h = base_img.size
-            new_w = int(bg_w * scale)
-            new_h = int(layer.size[1] * (new_w / layer.size[0]))
-            layer = layer.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            
-            # 2. 합성 (x_off, y_off 적용)
-            # 기본 중앙 배치를 위해 좌측 여백 계산
-            start_x = (bg_w - new_w) // 2 + x_off
-            base_img.alpha_composite(layer, (start_x, y_off))
+            # 모든 이미지를 캐릭터 몸체 크기에 맞춰요
+            layer = layer.resize(base_img.size, Image.Resampling.LANCZOS)
+            # y_off 값을 조절해서 위아래 위치를 맞출 수 있어요 (예: -20은 위로 이동)
+            base_img.alpha_composite(layer, (0, y_off))
     except:
         pass
     return base_img
 
-# --- 파일 목록 인식 ---
+# --- 파일 목록 가져오기 ---
 def get_list(cat):
     items = ["안 함"]
     if os.path.exists(f"{cat}.png"): items.append(cat)
@@ -41,92 +36,87 @@ def get_list(cat):
         if os.path.exists(f"{cat}{i}.png"): items.append(f"{cat}{i}")
     return items
 
-# --- 메뉴 구성 ---
-with st.sidebar:
-    st.header("🛠️ 마법 조절 도구")
-    edit_mode = st.checkbox("아이템 크기/위치 조절하기")
-    if edit_mode:
-        st.info("아래 슬라이더로 위치를 맞춘 뒤 숫자를 기억하세요!")
-        adj_x = st.slider("가로 이동", -400, 400, 0)
-        adj_y = st.slider("세로 이동", -200, 800, 0)
-        adj_s = st.slider("크기 조절", 0.1, 2.0, 1.0, 0.05)
-    else:
-        adj_x, adj_y, adj_s = 0, 0, 1.0
+# --- 스타일링 메뉴 ---
+st.subheader("🎨 예서의 코디 타임")
+tab1, tab2, tab3 = st.tabs(["🏠 배경", "💇 헤어/얼굴", "👗 옷/장식"])
 
-tabs = st.tabs(["🏠 배경", "💇 헤어/눈", "👗 의상", "🎀 장식"])
-
-with tabs[0]:
+with tab1:
+    # 깃허브에 '배경1.png', '배경2.png'라고 올리면 목록에 나와요
     bg_list = ["기본 핑크"] + [f"배경{i}" for i in range(1, 5) if os.path.exists(f"배경{i}.png")]
     bg_choice = st.selectbox("어디로 갈까요?", bg_list)
 
-with tabs[1]:
+with tab2:
     c1, c2 = st.columns(2)
     with c1: hair_choice = st.selectbox("헤어 스타일", get_list("헤어"))
     with c2: eye_choice = st.selectbox("예쁜 눈", get_list("눈"))
     mouth_choice = st.selectbox("입 모양", get_list("입"))
 
-with tabs[2]:
-    mode = st.radio("의상 종류", ["한벌", "상하의"], horizontal=True)
-    if mode == "한벌":
+with tab3:
+    style_mode = st.radio("의상 종류", ["한벌", "상하의"], horizontal=True)
+    if style_mode == "한벌":
         one_choice = st.selectbox("원피스", get_list("한벌"))
     else:
         c1, c2 = st.columns(2)
         with c1: top_choice = st.selectbox("상의", get_list("상의"))
         with c2: bottom_choice = st.selectbox("하의", get_list("하의"))
-
-with tabs[3]:
     hat_choice = st.selectbox("모자/머리띠", get_list("모자"))
-    acc_choice = st.selectbox("기타 장식", get_list("악세사리"))
 
-# --- 메인 캔버스 그리기 ---
+st.divider()
+
+# --- 메인 화면 그리기 ---
 try:
-    # 배경
-    bg_path = f"{bg_choice}.png"
-    if bg_choice != "기본 핑크" and os.path.exists(bg_path):
-        canvas = Image.open(bg_path).convert("RGBA").resize((800, 1200))
+    # 1. 배경 설정
+    if bg_choice != "기본 핑크" and os.path.exists(f"{bg_choice}.png"):
+        canvas = Image.open(f"{bg_choice}.png").convert("RGBA").resize((800, 1200))
     else:
         canvas = Image.new("RGBA", (800, 1200), (255, 242, 245, 255))
 
+    # 2. 캐릭터 몸체
     if os.path.exists("body.png"):
         body = Image.open("body.png").convert("RGBA").resize((800, 1200))
         canvas.alpha_composite(body)
 
-        # 아이템 합성 (조절 모드일 때는 마지막에 선택한 카테고리에 슬라이더 값이 적용됨)
-        # 평소에는 기본값(0, 0, 1.0)으로 작동
-        
-        # 순서대로 입히기
+        # 3. 아이템 입히기 (순서대로)
         if eye_choice != "안 함": canvas = apply_layer(canvas, f"{eye_choice}.png")
         if mouth_choice != "안 함": canvas = apply_layer(canvas, f"{mouth_choice}.png")
         
-        # 헤어 조절 예시 (조절 모드 켜졌을 때 헤어 탭이면 작동)
-        h_x, h_y, h_s = (adj_x, adj_y, adj_s) if edit_mode and hair_choice != "안 함" else (0, -20, 1.0)
-        if hair_choice != "안 함": canvas = apply_layer(canvas, f"{hair_choice}.png", h_x, h_y, h_s)
+        # 헤어가 어색하면 아래 -20 숫자를 0이나 -30으로 바꿔보세요!
+        if hair_choice != "안 함": canvas = apply_layer(canvas, f"{hair_choice}.png", y_off=-20)
         
-        if mode == "한벌" and one_choice != "안 함": canvas = apply_layer(canvas, f"{one_choice}.png")
-        elif mode == "상하의":
+        if style_mode == "한벌" and one_choice != "안 함": 
+            canvas = apply_layer(canvas, f"{one_choice}.png")
+        elif style_mode == "상하의":
             if top_choice != "안 함": canvas = apply_layer(canvas, f"{top_choice}.png")
             if bottom_choice != "안 함": canvas = apply_layer(canvas, f"{bottom_choice}.png")
             
         if hat_choice != "안 함": canvas = apply_layer(canvas, f"{hat_choice}.png")
-        if acc_choice != "안 함": canvas = apply_layer(canvas, f"{acc_choice}.png")
 
         st.image(canvas, use_container_width=True)
-        
-        if edit_mode:
-            st.warning(f"현재 조절 값 -> 가로: {adj_x}, 세로: {adj_y}, 크기: {adj_s}")
     else:
-        st.error("body.png 파일이 필요해요!")
+        st.error("body.png 파일을 찾을 수 없어요!")
 except Exception as e:
-    st.write("이미지 로딩 중...")
+    st.write("이미지를 불러오는 중입니다...")
 
-# --- 풍선 파티 ---
+# --- 풍선 터뜨리기 파티 (클릭하면 팡!) ---
 st.divider()
-if 'balloons' not in st.session_state: st.session_state.balloons = [True] * 5
-b_cols = st.columns(5)
+st.subheader("🎈 풍선을 터뜨려요!")
+
+if 'balloons' not in st.session_state:
+    st.session_state.balloons = [True] * 5
+
+cols = st.columns(5)
 for i in range(5):
-    with b_cols[i]:
+    with cols[i]:
         if st.session_state.balloons[i]:
+            # 풍선을 누르면 터지는 효과!
             if st.button("🎈", key=f"b_{i}"):
                 st.session_state.balloons[i] = False
+                st.balloons() # 화면 가득 풍선 축하 효과
                 st.rerun()
-        else: st.write("💥")
+        else:
+            st.markdown("<p class='balloon-text'>💥</p>", unsafe_allow_html=True)
+
+if not any(st.session_state.balloons):
+    if st.button("🔄 풍선 다시 불기"):
+        st.session_state.balloons = [True] * 5
+        st.rerun()

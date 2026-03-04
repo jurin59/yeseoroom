@@ -16,7 +16,7 @@ st.markdown("""
 st.title("💖 예서의 마법 옷장 👗")
 
 # --- 이미지 합성 함수 (아빠가 여기서 숫자를 조절할 수 있어요!) ---
-def apply_layer(base_img, path, y_off=0):
+def apply_layer(base_img, path, y_off=20):
     try:
         if os.path.exists(path):
             layer = Image.open(path).convert("RGBA")
@@ -120,3 +120,4 @@ if not any(st.session_state.balloons):
     if st.button("🔄 풍선 다시 불기"):
         st.session_state.balloons = [True] * 5
         st.rerun()
+

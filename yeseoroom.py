@@ -60,3 +60,66 @@ with tab3:
         one_choice = st.selectbox("원피스/드레스", get_list("한벌"))
     else:
         c1, c2 = st.columns(2)
+        with c1: top_choice = st.selectbox("상의", get_list("상의"))
+        with c2: bottom_choice = st.selectbox("하의", get_list("하의"))
+    hat_choice = st.selectbox("모자 및 머리띠", get_list("모자"))
+
+st.divider()
+
+# --- 캐릭터 그리기 영역 ---
+try:
+    # 1. 배경 설정
+    if bg_choice != "기본 핑크" and os.path.exists(f"{bg_choice}.png"):
+        canvas = Image.open(f"{bg_choice}.png").convert("RGBA").resize((800, 1200))
+    else:
+        canvas = Image.new("RGBA", (800, 1200), (255, 242, 245, 255))
+
+    # 2. 몸체(body.png)
+    if os.path.exists("body.png"):
+        body = Image.open("body.png").convert("RGBA").resize((800, 1200))
+        canvas.alpha_composite(body)
+
+        # 3. 아이템 겹치기 (눈 -> 입 -> 헤어 -> 옷 -> 모자 순서)
+        if eye_choice != "안 함": canvas = apply_layer(canvas, f"{eye_choice}.png")
+        if mouth_choice != "안 함": canvas = apply_layer(canvas, f"{mouth_choice}.png")
+        
+        # 헤어 위치가 안 맞으면 아래 -20 숫자를 조절하세요!
+        if hair_choice != "안 함": canvas = apply_layer(canvas, f"{hair_choice}.png", y_off=-20)
+        
+        if style_mode == "한벌 옷" and one_choice != "안 함": 
+            canvas = apply_layer(canvas, f"{one_choice}.png")
+        elif style_mode == "상의 & 하의":
+            if top_choice != "안 함": canvas = apply_layer(canvas, f"{top_choice}.png")
+            if bottom_choice != "안 함": canvas = apply_layer(canvas, f"{bottom_choice}.png")
+            
+        if hat_choice != "안 함": canvas = apply_layer(canvas, f"{hat_choice}.png")
+
+        st.image(canvas, use_container_width=True)
+    else:
+        st.error("앗! 깃허브에 'body.png' 사진이 없어요.")
+except Exception as e:
+    st.write("이미지를 마법으로 불러오는 중... ✨")
+
+# --- 🎈 풍선 터뜨리기 파티 영역 ---
+st.divider()
+st.subheader("🎈 풍선을 터뜨려요!")
+
+if 'balloons' not in st.session_state:
+    st.session_state.balloons = [True] * 5
+
+# 풍선 버튼 5개 가로 배치
+cols = st.columns(5)
+for i in range(5):
+    with cols[i]:
+        if st.session_state.balloons[i]:
+            if st.button("🎈", key=f"btn_{i}"):
+                st.session_state.balloons[i] = False
+                st.balloons() # 전체 화면에 축하 풍선이 올라와요!
+                st.rerun()
+        else:
+            st.markdown("<p class='pop-text'>💥</p>", unsafe_allow_html=True)
+
+if not any(st.session_state.balloons):
+    if st.button("🔄 풍선 다시 불기"):
+        st.session_state.balloons = [True] * 5
+        st.rerun()
